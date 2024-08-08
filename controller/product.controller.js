@@ -16,18 +16,21 @@ exports.createProduct = asyncHandler(async (req, res) => {
 });
 
 // Controller for get all products
-exports.getAllProduct = asyncHandler(async (_req, res) => {
-  const apiFeature = new ApiFeatures(Product.find(), req.query)
-  const product = await Product.find();
+exports.getAllProduct = asyncHandler(async (req, res) => {
+  const resultPerPage = 5;
+  const productCount = await Product.countDocuments()
+  const apiFeature = new ApiFeatures(Product.find(), req.query).search().filter().pagination(resultPerPage);
+  const product = await apiFeature.query;
 
   res.status(201).json({
     success: true,
     message: "Product fetched successfully",
     product,
+    productCount
   });
 })
 
-exports.getProductDetails = asyncHandler(async (req, res) =>  {
+exports.getProductDetails = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
 
   if (!product) {
