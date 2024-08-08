@@ -1,14 +1,10 @@
 const mongoose = require("mongoose");
-const URI = 'mongodb://0.0.0.0:27017/Ecommerce';
+// const URI = 'mongodb://0.0.0.0:27017/Ecommerce';
 
-const connectDataBase = async () => {
-    try {
-        await mongoose.connect(process.env.DB_URI)
-        console.log("Connection successful to Db")
-    } catch (error) {
-        console.log("Database not connected", error)
-        process.exit(0)
-    }
+const connectDataBase = () => {
+    mongoose.connect(process.env.DB_URI).then((data) => {
+        console.log(`Mongodb connected with server: ${data.connection.host}`)
+    })
 };
 
 module.exports = connectDataBase;
