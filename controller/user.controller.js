@@ -1,6 +1,7 @@
 const User = require('../model/user.model')
 const ErrorHandler = require("../utils/errorHandler");
 const asyncHandler = require("../middleware/asyncHandler");
+const sendToken = require('../utils/jwtToken');
 
 // Register a User
 exports.registerUser = asyncHandler(async (req, res, next) => {
@@ -16,14 +17,7 @@ exports.registerUser = asyncHandler(async (req, res, next) => {
         }
     })
 
-    const token = user.getJWTToken()
-
-    res.status(201).json({
-        success: true,
-        message: "User registered successfully",
-        user,
-        token
-    })
+    sendToken(user, 201, res)
 })
 
 exports.loginUser = asyncHandler(async (req, res, next) => {
@@ -45,13 +39,19 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
         return next(new ErrorHandler("Invalid email or password", 401))
     }
 
-    const token = user.getJWTToken()
+    sendToken(user, 200, res)
+})
 
+// Logout user
+
+exports.logOut = asyncHandler(async (req, res, next) => {
+    res.cookie("token", null, {
+        expires: new Date(Date.now()),
+        httpOnly: true
+    })
     res.status(200).json({
         success: true,
-        message: "User logged in successfully",
-        user,
-        token
+        message: "Logged out successfully"
     })
 })
 
@@ -68,19 +68,19 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
 // })
 
 // // Controller for get single user
-// exports.getUserDetails = asyncHandler(async (req, res, next) => {
-//     const user = await User.findById(req.params.id);
+exports.getUserDetails = asyncHandler(async (req, res, next) => {
+    const user = await User.findById(req.user.id);
 
-//     if (!user) {
-//         return next(new ErrorHandler("User not found", 404))
-//     }
+    if (!user) {
+        return next(new ErrorHandler("User not found", 404))
+    }
 
-//     res.status(200).json({
-//         success: true,
-//         message: "User details fetched successfully",
-//         user
-//     })
-// })
+    res.status(200).json({
+        success: true,
+        message: "User details fetched successfully",
+        user
+    })
+})
 
 // // Controller for updating existing user
 // exports.updateUser = asyncHandler(async (req, res, next) => {
@@ -111,3 +111,24 @@ exports.loginUser = asyncHandler(async (req, res, next) => {
 //         user
 //     })
 // })
+
+// Update user password
+exports.updatePassword = asyncHandler(async (req, res, next) => {
+    const user = await User.findById(req.user.id).select("+password")
+
+    const isPasswordMatched = await user.comparePassword(req.body.oldPassword)
+
+    if (!isPasswordMatched) {
+        return next(new ErrorHandler("Old password is incorrect", 400))
+    }
+
+    if (req.body.newPassword !== req.body.confirmPassword) {
+        return next(new ErrorHandler("Password does not match", 400))
+    }
+
+    user.password = req.body.newPassword;
+
+    await user.save()
+
+    sendToken(user, 200, res)
+})
